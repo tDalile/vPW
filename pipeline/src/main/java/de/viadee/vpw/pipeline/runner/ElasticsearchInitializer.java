@@ -18,6 +18,9 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -34,7 +37,8 @@ public class ElasticsearchInitializer implements ApplicationRunner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ElasticsearchInitializer.class);
 
-    private static final String INDEX_TEMPLATE_NAME = "vpw";
+    private static final String INDEX_TEMPLATE_PROCESS_NAME = "vpw-process";
+    private static final String INDEX_TEMPLATE_DECISION_NAME = "vpw-decision";
 
     private final PipelineElasticsearchProperties pipelineElasticsearchProperties;
 
@@ -43,6 +47,8 @@ public class ElasticsearchInitializer implements ApplicationRunner {
     private final ObjectMapper objectMapper;
 
     private final String indexNamePattern;
+
+    private ResourceLoader resourceLoader;
 
     @Autowired
     public ElasticsearchInitializer(ElasticsearchProperties elasticsearchProperties,
@@ -56,25 +62,45 @@ public class ElasticsearchInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        if (!indexTemplateExists()) {
-            createIndexTemplate();
+        // for each resource in path do
+        Resource[] templates = ResourcePatternUtils.getResourcePatternResolver(resourceLoader).getResources("classpath:/elasticsearch/**.json");
+        for (Resource template: templates) {
+            if (!indexTemplateExists(template)) {
+                createIndexTemplate(template);
+            }
         }
+
     }
 
-    private void createIndexTemplate() throws IOException {
-        LOGGER.info("Creating Elasticsearch index template '{}'", INDEX_TEMPLATE_NAME);
-        PutIndexTemplateRequest request = new PutIndexTemplateRequest(INDEX_TEMPLATE_NAME);
-        request.source(createIndexTemplateJson(), XContentType.JSON);
-        elasticsearchClient.indices().putTemplate(request, RequestOptions.DEFAULT);
+    private void createIndexTemplate(Resource file) throws IOException {
+
+        if (file.getFilename().contains("process")) {
+            LOGGER.info("Creating Elasticsearch index template '{}'", INDEX_TEMPLATE_PROCESS_NAME);
+            PutIndexTemplateRequest request = new PutIndexTemplateRequest(INDEX_TEMPLATE_PROCESS_NAME);
+            request.source(createIndexTemplateJson(file), XContentType.JSON);
+            elasticsearchClient.indices().putTemplate(request, RequestOptions.DEFAULT);
+        } else {
+            LOGGER.info("Creating Elasticsearch index template '{}'", INDEX_TEMPLATE_DECISION_NAME);
+            PutIndexTemplateRequest request = new PutIndexTemplateRequest(INDEX_TEMPLATE_DECISION_NAME);
+            request.source(createIndexTemplateJson(file), XContentType.JSON);
+            elasticsearchClient.indices().putTemplate(request, RequestOptions.DEFAULT);
+        }
+
+
     }
 
-    private boolean indexTemplateExists() throws IOException {
-        IndexTemplatesExistRequest request = new IndexTemplatesExistRequest(INDEX_TEMPLATE_NAME);
+    private boolean indexTemplateExists(Resource file) throws IOException {
+        IndexTemplatesExistRequest request;
+        if (file.getFilename().contains("process")) {
+            request = new IndexTemplatesExistRequest(INDEX_TEMPLATE_PROCESS_NAME);
+        } else {
+            request = new IndexTemplatesExistRequest(INDEX_TEMPLATE_DECISION_NAME);
+        }
         return elasticsearchClient.indices().existsTemplate(request, RequestOptions.DEFAULT);
     }
 
-    private String createIndexTemplateJson() throws IOException {
-        JsonNode template = readIndexTemplateFile();
+    private String createIndexTemplateJson(Resource file) throws IOException {
+        JsonNode template = readIndexTemplateFile(file);
         ArrayNode indexPatterns = (ArrayNode) template.get("index_patterns");
         indexPatterns.add(indexNamePattern);
         ObjectNode settings = (ObjectNode) template.get("settings");
@@ -83,8 +109,7 @@ public class ElasticsearchInitializer implements ApplicationRunner {
         return template.toString();
     }
 
-    private JsonNode readIndexTemplateFile() throws IOException {
-        ClassPathResource file = new ClassPathResource("/elasticsearch/index-template.json");
+    private JsonNode readIndexTemplateFile(Resource file) throws IOException {
         Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
         return objectMapper.readValue(reader, JsonNode.class);
     }

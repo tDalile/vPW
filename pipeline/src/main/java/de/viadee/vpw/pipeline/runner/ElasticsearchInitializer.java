@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 
+import de.viadee.vpw.pipeline.config.properties.ApplicationProperties;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -18,9 +19,6 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -40,6 +38,7 @@ public class ElasticsearchInitializer implements ApplicationRunner {
     private static final String INDEX_TEMPLATE_PROCESS_NAME = "vpw-process";
     private static final String INDEX_TEMPLATE_DECISION_NAME = "vpw-decision";
 
+    private final ApplicationProperties properties;
     private final PipelineElasticsearchProperties pipelineElasticsearchProperties;
 
     private final RestHighLevelClient elasticsearchClient;
@@ -48,12 +47,12 @@ public class ElasticsearchInitializer implements ApplicationRunner {
 
     private final String indexNamePattern;
 
-    private ResourceLoader resourceLoader;
 
     @Autowired
-    public ElasticsearchInitializer(ElasticsearchProperties elasticsearchProperties,
-            PipelineElasticsearchProperties pipelineElasticsearchProperties, RestHighLevelClient elasticsearchClient,
-            ObjectMapper objectMapper) {
+    public ElasticsearchInitializer(ApplicationProperties properties, ElasticsearchProperties elasticsearchProperties,
+                                    PipelineElasticsearchProperties pipelineElasticsearchProperties, RestHighLevelClient elasticsearchClient,
+                                    ObjectMapper objectMapper) {
+        this.properties = properties;
         this.pipelineElasticsearchProperties = pipelineElasticsearchProperties;
         this.elasticsearchClient = elasticsearchClient;
         this.objectMapper = objectMapper;
@@ -62,36 +61,35 @@ public class ElasticsearchInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        // for each resource in path do
-        Resource[] templates = ResourcePatternUtils.getResourcePatternResolver(resourceLoader).getResources("classpath:/elasticsearch/**.json");
-        for (Resource template: templates) {
-            if (!indexTemplateExists(template)) {
-                createIndexTemplate(template);
+
+        for (String filename: properties.getIndexTemplates()) {
+            if (!indexTemplateExists(filename)) {
+                createIndexTemplate(filename);
             }
         }
 
     }
 
-    private void createIndexTemplate(Resource file) throws IOException {
+    private void createIndexTemplate(String filename) throws IOException {
 
-        if (file.getFilename().contains("process")) {
+        PutIndexTemplateRequest request;
+
+        if (filename.contains("process")) {
             LOGGER.info("Creating Elasticsearch index template '{}'", INDEX_TEMPLATE_PROCESS_NAME);
-            PutIndexTemplateRequest request = new PutIndexTemplateRequest(INDEX_TEMPLATE_PROCESS_NAME);
-            request.source(createIndexTemplateJson(file), XContentType.JSON);
-            elasticsearchClient.indices().putTemplate(request, RequestOptions.DEFAULT);
+            request = new PutIndexTemplateRequest(INDEX_TEMPLATE_PROCESS_NAME);
         } else {
             LOGGER.info("Creating Elasticsearch index template '{}'", INDEX_TEMPLATE_DECISION_NAME);
-            PutIndexTemplateRequest request = new PutIndexTemplateRequest(INDEX_TEMPLATE_DECISION_NAME);
-            request.source(createIndexTemplateJson(file), XContentType.JSON);
-            elasticsearchClient.indices().putTemplate(request, RequestOptions.DEFAULT);
+            request = new PutIndexTemplateRequest(INDEX_TEMPLATE_DECISION_NAME);
         }
 
+        request.source(createIndexTemplateJson(filename), XContentType.JSON);
+        elasticsearchClient.indices().putTemplate(request, RequestOptions.DEFAULT);
 
     }
 
-    private boolean indexTemplateExists(Resource file) throws IOException {
+    private boolean indexTemplateExists(String filename) throws IOException {
         IndexTemplatesExistRequest request;
-        if (file.getFilename().contains("process")) {
+        if (filename.contains("process")) {
             request = new IndexTemplatesExistRequest(INDEX_TEMPLATE_PROCESS_NAME);
         } else {
             request = new IndexTemplatesExistRequest(INDEX_TEMPLATE_DECISION_NAME);
@@ -99,8 +97,8 @@ public class ElasticsearchInitializer implements ApplicationRunner {
         return elasticsearchClient.indices().existsTemplate(request, RequestOptions.DEFAULT);
     }
 
-    private String createIndexTemplateJson(Resource file) throws IOException {
-        JsonNode template = readIndexTemplateFile(file);
+    private String createIndexTemplateJson(String filename) throws IOException {
+        JsonNode template = readIndexTemplateFile(filename);
         ArrayNode indexPatterns = (ArrayNode) template.get("index_patterns");
         indexPatterns.add(indexNamePattern);
         ObjectNode settings = (ObjectNode) template.get("settings");
@@ -109,7 +107,8 @@ public class ElasticsearchInitializer implements ApplicationRunner {
         return template.toString();
     }
 
-    private JsonNode readIndexTemplateFile(Resource file) throws IOException {
+    private JsonNode readIndexTemplateFile(String filename) throws IOException {
+        ClassPathResource file = new ClassPathResource("/elasticsearch/" + filename +".json");
         Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
         return objectMapper.readValue(reader, JsonNode.class);
     }

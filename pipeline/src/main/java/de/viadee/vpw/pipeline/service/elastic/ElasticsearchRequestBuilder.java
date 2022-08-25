@@ -1,5 +1,6 @@
 package de.viadee.vpw.pipeline.service.elastic;
 
+import de.viadee.camunda.kafka.event.DecisionInstanceEvent;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.xcontent.XContentType;
@@ -75,7 +76,11 @@ public class ElasticsearchRequestBuilder {
         }
 
         private IndexRequest build() {
-            String index = properties.getIndexPrefix() + DigestUtils.sha256Hex(event.getProcessDefinitionId());
+            String index;
+            if (event.getClass().getSimpleName().contains("Decision")) {
+                index = properties.getIndexPrefix() + "decision-" + DigestUtils.sha256Hex(((DecisionInstanceEvent) event).getDecisionDefinitionId());
+            } else { index = properties.getIndexPrefix() + "process-" + DigestUtils.sha256Hex(event.getProcessDefinitionId());}
+
             String type = properties.getMappingType();
 
             IndexRequest request = (acknowledgment == null ?

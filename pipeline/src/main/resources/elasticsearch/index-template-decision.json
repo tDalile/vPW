@@ -7,37 +7,13 @@
         "type": {
           "type": "keyword"
         },
-        "parentJoin": {
-          "type": "join",
-          "relations": {
-            "decision": {
-              "input": "input",
-              "output": "output"
-            }
-          }
-        },
-        "processInstanceId": {
+        "decisionDefinitionId": {
           "type": "keyword"
         },
-        "processDefinitionId": {
+        "decisionDefinitionKey": {
           "type": "keyword"
         },
-        "businessKey": {
-          "type": "keyword"
-        },
-        "startUserId": {
-          "type": "keyword"
-        },
-        "superProcessInstanceId": {
-          "type": "keyword"
-        },
-        "endActivityId": {
-          "type": "keyword"
-        },
-        "startActivityId": {
-          "type": "keyword"
-        },
-        "tenantId": {
+        "decisionDefinitionName": {
           "type": "keyword"
         },
         "activityId": {
@@ -46,34 +22,42 @@
         "activityInstanceId": {
           "type": "keyword"
         },
-        "parentActivityInstanceId": {
+        "rootProcessInstanceId": {
           "type": "keyword"
         },
-        "calledProcessInstanceId": {
+        "tenantId": {
           "type": "keyword"
         },
-        "variableName": {
+        "userId": {
           "type": "keyword"
         },
-        "variableInstanceId": {
+        "rootDecisionInstanceId": {
           "type": "keyword"
         },
-        "scopeActivityInstanceId": {
+        "decisionRequirementsDefinitionId": {
           "type": "keyword"
+        },
+        "decisionRequirementsDefinitionKey": {
+          "type": "keyword"
+        },
+        "collectResultValue": {
+          "type": "double"
+        },
+        "inputs": {
+          "type": "object"
+        },
+        "outputs": {
+          "type": "object"
         },
         "timestamp": {
           "type": "date",
           "format": "epoch_millis"
         },
-        "startTime": {
+        "evaluationTime": {
           "type": "date",
           "format": "epoch_millis"
         },
-        "endTime": {
-          "type": "date",
-          "format": "epoch_millis"
-        },
-        "createTime": {
+        "removalTime": {
           "type": "date",
           "format": "epoch_millis"
         }

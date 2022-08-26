@@ -78,8 +78,8 @@ public class ElasticsearchRequestBuilder {
         private IndexRequest build() {
             String index;
             if (event.getClass().getSimpleName().contains("Decision")) {
-                index = properties.getIndexPrefix() + "decision-" + DigestUtils.sha256Hex(((DecisionInstanceEvent) event).getDecisionDefinitionId());
-            } else { index = properties.getIndexPrefix() + "process-" + DigestUtils.sha256Hex(event.getProcessDefinitionId());}
+                index = "vpw-" + "decision-" + DigestUtils.sha256Hex(((DecisionInstanceEvent) event).getDecisionDefinitionId());
+            } else { index = "vpw-" + "process-" + DigestUtils.sha256Hex(event.getProcessDefinitionId());}
 
             String type = properties.getMappingType();
 

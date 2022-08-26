@@ -45,9 +45,6 @@ public class ElasticsearchInitializer implements ApplicationRunner {
 
     private final ObjectMapper objectMapper;
 
-    private final String indexNamePattern;
-
-
     @Autowired
     public ElasticsearchInitializer(ApplicationProperties properties, ElasticsearchProperties elasticsearchProperties,
                                     PipelineElasticsearchProperties pipelineElasticsearchProperties, RestHighLevelClient elasticsearchClient,
@@ -56,7 +53,6 @@ public class ElasticsearchInitializer implements ApplicationRunner {
         this.pipelineElasticsearchProperties = pipelineElasticsearchProperties;
         this.elasticsearchClient = elasticsearchClient;
         this.objectMapper = objectMapper;
-        indexNamePattern = elasticsearchProperties.getIndexPrefix() + "*";
     }
 
     @Override
@@ -100,7 +96,11 @@ public class ElasticsearchInitializer implements ApplicationRunner {
     private String createIndexTemplateJson(String filename) throws IOException {
         JsonNode template = readIndexTemplateFile(filename);
         ArrayNode indexPatterns = (ArrayNode) template.get("index_patterns");
-        indexPatterns.add(indexNamePattern);
+        if (filename.contains("process")) {
+            indexPatterns.add(INDEX_TEMPLATE_PROCESS_NAME + "-*");
+        } else {
+            indexPatterns.add(INDEX_TEMPLATE_DECISION_NAME + "-*");
+        }
         ObjectNode settings = (ObjectNode) template.get("settings");
         settings.put("number_of_shards", pipelineElasticsearchProperties.getNumberOfShards());
         settings.put("number_of_replicas", pipelineElasticsearchProperties.getNumberOfReplicas());

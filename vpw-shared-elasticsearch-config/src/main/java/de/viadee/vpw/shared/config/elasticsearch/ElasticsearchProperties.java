@@ -11,8 +11,6 @@ public class ElasticsearchProperties {
 
     private int maxRetryTimeoutMillis = 9000;
 
-    private String indexPrefix = "vpw-";
-
     /**
      * TODO Deprecated in Elasticsearch 7.x
      */
@@ -40,14 +38,6 @@ public class ElasticsearchProperties {
 
     public void setMaxRetryTimeoutMillis(int maxRetryTimeoutMillis) {
         this.maxRetryTimeoutMillis = maxRetryTimeoutMillis;
-    }
-
-    public String getIndexPrefix() {
-        return indexPrefix;
-    }
-
-    public void setIndexPrefix(String indexPrefix) {
-        this.indexPrefix = indexPrefix;
     }
 
     public String getMappingType() {

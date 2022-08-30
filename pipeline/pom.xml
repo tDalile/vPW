@@ -17,15 +17,8 @@
         <dependency>
             <groupId>de.viadee.camunda</groupId>
             <artifactId>camunda-kafka-model</artifactId>
-        </dependency>
-
-        <!-- Local Dependency TODO: REMOVE! -->
-        <dependency>
-            <groupId>test</groupId>
-            <artifactId>camunda-kafka-model</artifactId>
-            <version>1.0.0</version>
-            <scope>system</scope>
-            <systemPath>/home/dalile/Downloads/vPW-Testumgebung/camunda-kafka-polling-client/camunda-kafka-model/target/camunda-kafka-model.jar</systemPath>
+            <!-- Local Dependency TODO: REMOVE! -->
+            <version>3.0.0</version>
         </dependency>
 
         <!-- Spring Boot -->
